@@ -42,7 +42,7 @@ export default function JobInputPanel({
   onGenerate, loading, disabled,
 }: Props) {
   const canGenerate = jobDescription.trim().length > 0 && !loading && !disabled;
-  
+
   const currentInputBase = {
     ...inputBase,
     opacity: disabled ? 0.6 : 1,
@@ -161,7 +161,11 @@ export default function JobInputPanel({
       </div>
 
       {/* Spacer */}
-      <div style={{ flex: 1 }} />
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: 12.5, color: '#888', marginTop: "25px" }}>
+          GENERATING WITH GEMINI 2.5 FLASH MODEL
+        </p>
+      </div>
 
       {/* Generate */}
       <button
