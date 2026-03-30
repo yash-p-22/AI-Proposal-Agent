@@ -54,7 +54,7 @@ export default function ProposalPage() {
 
   return (
     <>
-      <Head><title>Proposal Review — Drafter.ai</title></Head>
+      <Head><title>Proposal Review — Drafter ai</title></Head>
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' }}>
         <Navbar />
         <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>

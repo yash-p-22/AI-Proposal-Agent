@@ -38,7 +38,7 @@ export default function Navbar() {
             <path d="M2 12l10 5 10-5" />
           </svg>
         </div>
-        <span style={{ fontSize: 16, fontWeight: 700, color: '#111', letterSpacing: '-0.3px' }}>Drafter.ai</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: '#111', letterSpacing: '-0.3px' }}>Drafter ai</span>
       </Link>
 
       {/* Nav centre pill */}

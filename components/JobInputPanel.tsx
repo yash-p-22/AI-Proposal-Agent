@@ -85,7 +85,7 @@ export default function JobInputPanel({
         <textarea
           value={jobDescription}
           onChange={e => setJobDescription(e.target.value)}
-          placeholder="We are looking for an experienced full-stack developer to build a SaaS dashboard with React and Node.js..."
+          placeholder="Describe the project, required skills, features, and expectations..."
           rows={6}
           disabled={disabled}
           style={{ ...currentInputBase, resize: 'none', lineHeight: 1.65 }}
@@ -125,7 +125,7 @@ export default function JobInputPanel({
           type="text"
           value={client}
           onChange={e => setClient(e.target.value)}
-          placeholder="Acme Corp"
+          placeholder="Enter client/company name "
           disabled={disabled}
           style={currentInputBase}
         />

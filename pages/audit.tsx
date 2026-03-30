@@ -80,7 +80,7 @@ export default function AuditLogs() {
   return (
     <>
       <Head>
-        <title>Audit Logs — Drafter.ai</title>
+        <title>Audit Logs — Drafter ai</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 

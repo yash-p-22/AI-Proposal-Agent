@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Copy, Download, Loader2, Check, ExternalLink, ChevronRight } from 'lucide-react';
+import { FileText, Copy, Download, Loader2, Check, ExternalLink, ChevronRight, RotateCcw } from 'lucide-react';
 import AgentStatusBar from './AgentStatusBar';
 import ApprovalControls from './ApprovalControls';
 import type { Proposal, AgentStep, ProposalOutput } from '@/types';
@@ -12,15 +12,17 @@ interface Props {
   budget:      string;
   timeline:    string;
   tone:        string;
-  regenLoading: boolean;
+  regenLoadingId: number | null;
+  sectionOverrides: Record<number, string>;
   disabled?: boolean;
   onApprove:   () => void;
   onRegenerate: (sectionId: number, instruction: 'regenerate' | 'shorten' | 'expand') => void;
+  onReset?: () => void;
 }
 
 export default function ProposalPreview({
   proposal, agentSteps, loading, client, budget, timeline, tone,
-  regenLoading, disabled, onApprove, onRegenerate,
+  regenLoadingId, sectionOverrides, disabled, onApprove, onRegenerate, onReset,
 }: Props) {
   const [copied, setCopied] = React.useState(false);
 
@@ -171,6 +173,14 @@ export default function ProposalPreview({
         </div>
         <HeaderBtn onClick={copyAll} icon={copied ? <Check size={12} color="#16a34a" /> : <Copy size={12} />} label={copied ? 'Copied!' : 'Copy'} />
         <HeaderBtn onClick={exportPdf} icon={<Download size={12} />} label="Export" />
+        {onReset && (
+          <HeaderBtn
+            onClick={onReset}
+            icon={<RotateCcw size={12} />}
+            label="Reset"
+            danger
+          />
+        )}
       </div>
 
       {/* ── Body ── */}
@@ -185,10 +195,10 @@ export default function ProposalPreview({
             <Section
               id={1} num={1} heading={output.introduction.heading}
               badge={{ text: 'Ready', color: '#7c3aed' }}
-              disabled={disabled} regenLoading={regenLoading} onRegenerate={onRegenerate}
+              disabled={disabled} regenLoadingId={regenLoadingId} onRegenerate={onRegenerate}
             >
               <p style={{ fontSize: 13.5, lineHeight: 1.78, color: '#444', margin: 0, whiteSpace: 'pre-wrap' }}>
-                {output.introduction.content}
+                {proposal.sections.find(s => s.id === 1)?.content ?? output.introduction.content}
               </p>
             </Section>
 
@@ -196,47 +206,61 @@ export default function ProposalPreview({
             <Section
               id={2} num={2} heading={output.project_plan.heading}
               badge={{ text: `${output.project_plan.steps.length} steps`, color: '#0ea5e9' }}
-              disabled={disabled} regenLoading={regenLoading} onRegenerate={onRegenerate}
+              disabled={disabled} regenLoadingId={regenLoadingId} onRegenerate={onRegenerate}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {output.project_plan.steps.map((step, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: 6, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#64748b', flexShrink: 0, marginTop: 1 }}>
-                      {i + 1}
+              {(() => {
+                const steps = sectionOverrides[2]
+                  ? parseProjectPlanSteps(sectionOverrides[2])
+                  : output.project_plan.steps;
+                const isOverride = !!sectionOverrides[2];
+                return (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {steps.length > 0 ? steps.map((step, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                          <div style={{ width: 22, height: 22, borderRadius: 6, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#64748b', flexShrink: 0, marginTop: 1 }}>
+                            {i + 1}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{step.title}</div>
+                            <div style={{ fontSize: 12.5, color: '#666', lineHeight: 1.6, marginTop: 2 }}>{step.description}</div>
+                          </div>
+                        </div>
+                      )) : (
+                        /* Fallback if parsing yields nothing: show plain text */
+                        <p style={{ fontSize: 13.5, lineHeight: 1.78, color: '#444', margin: 0, whiteSpace: 'pre-wrap' }}>{sectionOverrides[2]}</p>
+                      )}
                     </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{step.title}</div>
-                      <div style={{ fontSize: 12.5, color: '#666', lineHeight: 1.6, marginTop: 2 }}>{step.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {output.project_plan.timeline && (
-                <div style={{ marginTop: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, fontSize: 12.5, color: '#555' }}>
-                  <span style={{ fontWeight: 600, color: '#111' }}>Timeline: </span>{output.project_plan.timeline}
-                </div>
-              )}
-              {output.project_plan.deliverables.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deliverables</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {output.project_plan.deliverables.map((d, i) => (
-                      <span key={i} style={{ fontSize: 12, background: '#f1f5f9', borderRadius: 6, padding: '3px 9px', color: '#374151' }}>
-                        {d}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    {/* Always show original timeline & deliverables */}
+                    {output.project_plan.timeline && (
+                      <div style={{ marginTop: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, fontSize: 12.5, color: '#555' }}>
+                        <span style={{ fontWeight: 600, color: '#111' }}>Timeline: </span>{output.project_plan.timeline}
+                      </div>
+                    )}
+                    {output.project_plan.deliverables.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deliverables</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {output.project_plan.deliverables.map((d, i) => (
+                            <span key={i} style={{ fontSize: 12, background: '#f1f5f9', borderRadius: 6, padding: '3px 9px', color: '#374151' }}>{d}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </Section>
 
             {/* Case Studies */}
             <Section
               id={3} num={3} heading={output.case_studies.heading}
               badge={{ text: `${output.case_studies.items.length} items`, color: '#d97706' }}
-              disabled={disabled} regenLoading={regenLoading} onRegenerate={onRegenerate}
+              disabled={disabled} regenLoadingId={regenLoadingId} onRegenerate={onRegenerate}
             >
-              {output.case_studies.items.length === 0 ? (
+              {sectionOverrides[3] ? (
+                <p style={{ fontSize: 13.5, lineHeight: 1.78, color: '#444', margin: 0, whiteSpace: 'pre-wrap' }}>{sectionOverrides[3]}</p>
+              ) : output.case_studies.items.length === 0 ? (
                 <p style={{ fontSize: 12.5, color: '#aaa', margin: 0 }}>No matching case studies were found.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -272,13 +296,22 @@ export default function ProposalPreview({
             <Section
               id={4} num={4} heading={output.questions.heading}
               badge={{ text: `${output.questions.items.length} questions`, color: '#2563eb' }}
-              disabled={disabled} regenLoading={regenLoading} onRegenerate={onRegenerate}
+              disabled={disabled} regenLoadingId={regenLoadingId} onRegenerate={onRegenerate}
             >
-              <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {output.questions.items.map((q, i) => (
-                  <li key={i} style={{ fontSize: 13.5, color: '#444', lineHeight: 1.65 }}>{q}</li>
-                ))}
-              </ol>
+              {(() => {
+                const items = sectionOverrides[4]
+                  ? parseQuestions(sectionOverrides[4])
+                  : output.questions.items;
+                return items.length > 0 ? (
+                  <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {items.map((q, i) => (
+                      <li key={i} style={{ fontSize: 13.5, color: '#444', lineHeight: 1.65 }}>{q}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p style={{ fontSize: 13.5, lineHeight: 1.78, color: '#444', margin: 0, whiteSpace: 'pre-wrap' }}>{sectionOverrides[4]}</p>
+                );
+              })()}
             </Section>
 
           </div>
@@ -290,7 +323,7 @@ export default function ProposalPreview({
                 key={section.id}
                 id={section.id} num={i + 1} heading={section.title}
                 badge={{ text: 'Ready', color: '#7c3aed' }}
-                disabled={disabled} regenLoading={regenLoading} onRegenerate={onRegenerate}
+                disabled={disabled} regenLoadingId={regenLoadingId} onRegenerate={onRegenerate}
               >
                 <p style={{ fontSize: 13.5, lineHeight: 1.78, color: '#444', margin: 0, whiteSpace: 'pre-wrap' }}>
                   {section.content}
@@ -334,21 +367,48 @@ export default function ProposalPreview({
   );
 }
 
+// ─── Markdown content parsers ────────────────────────────────────────────────
+
+/** Parses '**Title**: description' lines into step objects */
+function parseProjectPlanSteps(text: string): Array<{ title: string; description: string }> {
+  const steps: Array<{ title: string; description: string }> = [];
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Match **Title**: description  OR  **Title**  (no colon)
+    const m = trimmed.match(/^\*\*(.+?)\*\*[:\s]*(.*)$/);
+    if (m) {
+      steps.push({ title: m[1].trim(), description: m[2].trim() });
+    }
+  }
+  return steps;
+}
+
+/** Parses '1. question text' lines into plain string array */
+function parseQuestions(text: string): string[] {
+  return text
+    .split('\n')
+    .map(l => l.trim().replace(/^\d+\.\s*/, '').trim())
+    .filter(q => q.length > 0);
+}
+
 // ─── Section accordion card ──────────────────────────────────────────────────
 
 function Section({
-  id, num, heading, badge, disabled, regenLoading, onRegenerate, children,
+  id, num, heading, badge, disabled, regenLoadingId, onRegenerate, children,
 }: {
   id: number;
   num: number;
   heading: string;
   badge: { text: string; color: string };
   disabled?: boolean;
-  regenLoading: boolean;
+  regenLoadingId: number | null;
   onRegenerate: (id: number, ins: 'regenerate' | 'shorten' | 'expand') => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(true);
+  const isThisLoading = regenLoadingId === id;
+  const anyLoading = regenLoadingId !== null;
 
   return (
     <div style={{ border: '1px solid #ebebeb', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
@@ -376,8 +436,8 @@ function Section({
           <div style={{ display: 'flex', gap: 7, marginTop: 12 }}>
             <RegenBtn
               onClick={() => onRegenerate(id, 'regenerate')}
-              disabled={disabled || regenLoading}
-              loading={regenLoading}
+              disabled={disabled || anyLoading}
+              loading={isThisLoading}
               label="Regenerate"
             />
           </div>
@@ -415,9 +475,22 @@ function RegenBtn({ onClick, disabled, loading, label }: { onClick: () => void; 
   );
 }
 
-function HeaderBtn({ onClick, icon, label }: { onClick: () => void; icon: React.ReactNode; label: string }) {
+function HeaderBtn({ onClick, icon, label, danger }: { onClick: () => void; icon: React.ReactNode; label: string; danger?: boolean }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', border: '1px solid #e2e8f0', borderRadius: 7, background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#555', fontFamily: 'Inter, sans-serif' }}>
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        padding: '5px 11px',
+        border: danger ? '1px solid #fca5a5' : '1px solid #e2e8f0',
+        borderRadius: 7,
+        background: danger ? '#fff5f5' : '#fff',
+        cursor: 'pointer',
+        fontSize: 12, fontWeight: 500,
+        color: danger ? '#dc2626' : '#555',
+        fontFamily: 'Inter, sans-serif',
+      }}
+    >
       {icon} {label}
     </button>
   );

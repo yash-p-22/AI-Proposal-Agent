@@ -261,22 +261,32 @@ export async function regenerateSection(
   jobContext: string,
 ): Promise<string> {
   const instructionMap: Record<string, string> = {
-    regenerate: 'Rewrite this section completely with fresh phrasing.',
+    regenerate: 'Rewrite this section with fresh, improved phrasing and content.',
     shorten:    'Shorten this to roughly half the length. Keep all key points.',
     expand:     'Expand this with more detail, specific examples, and compelling language.',
   };
 
   const system = `You are an expert freelance proposal writer.
 ${instructionMap[instruction] ?? instruction}
-Return ONLY the new section text — no section title, no JSON, no markdown formatting, no code fences, no extra commentary.`;
+
+CRITICAL FORMATTING RULES — you MUST follow these exactly:
+1. Preserve the EXACT SAME structure and format as the original content.
+2. If the original uses a numbered list (1. 2. 3. ...), your output MUST also use a numbered list with the same number of items.
+3. If the original uses markdown bold headers (**Title**: description), your output MUST also use markdown bold headers with the same number of sections.
+4. If the original has bullet points, timelines, deliverables sections — keep them all in the same structure.
+5. Do NOT add a section title at the top.
+6. Do NOT add JSON, code fences, or extra commentary.
+7. Match the number of items/steps/questions exactly — do not add or remove items.
+Return ONLY the reformatted section content preserving the original structure.`;
 
   const user = `Section: "${sectionTitle}"
-Original content:
+
+Original content (COPY THIS EXACT STRUCTURE/FORMAT):
 ${originalContent}
 
 Job context: ${jobContext}
 
-Write the improved content now:`;
+Rewrite the content now, keeping the EXACT SAME structure and format as the original:`;
 
   return await callGemini(system, user, 1200);
 }

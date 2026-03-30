@@ -6,3 +6,8 @@ vite.config.ts.*
 *.tar.gz
 .env
 .env.local
+.next
+.env.example
+*.log
+.idea       
+.vscode
